@@ -5,6 +5,7 @@ export default tseslint.config(
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    files: ["**/*.{js,mjs,jsx,ts,tsx}"],
     languageOptions: {},
     rules: {
       "no-empty": "off",
@@ -23,6 +24,6 @@ export default tseslint.config(
     },
   },
   {
-    ignores: ["dist/**", "node_modules/**", ".turbo/**"],
+    ignores: ["dist/**", "node_modules/**", ".turbo/**", ".next/**"],
   },
 )
