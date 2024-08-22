@@ -1,3 +1,5 @@
+"use client"
+
 import { ColumnDef, flexRender, getCoreRowModel, Table as TableType, useReactTable } from "@tanstack/react-table"
 import { PeriodBudgetEntry } from "./periodBudget.utils"
 import { PropsWithChildren, useMemo, useState } from "react"
@@ -53,11 +55,21 @@ function NewEntryRow(props: NewEntryRowProps) {
       <TableCell>
         <Cell>
           <Input type="text" placeholder="název" autoFocus={true} required {...form.register("name")} />
+          {form.formState.errors.name && <p className="text-red-500 text-left">{form.formState.errors.name.message}</p>}
         </Cell>
       </TableCell>
       <TableCell>
         <Cell>
-          <Input type="number" placeholder="částka" step={0.01} required {...form.register("amount")} />
+          <Input
+            type="number"
+            placeholder="částka"
+            step={0.01}
+            required
+            {...form.register("amount", { valueAsNumber: true })}
+          />
+          {form.formState.errors.amount && (
+            <p className="text-red-500 text-left">{form.formState.errors.amount.message}</p>
+          )}
         </Cell>
       </TableCell>
       <TableCell>
