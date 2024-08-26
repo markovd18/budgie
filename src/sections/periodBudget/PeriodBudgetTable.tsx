@@ -4,7 +4,7 @@ import { ColumnDef, flexRender, getCoreRowModel, Table as TableType, useReactTab
 import { PeriodBudgetEntry } from "./periodBudget.utils"
 import { PropsWithChildren, useMemo, useState } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/Table"
-import { IconCheck, IconPlus, IconTrash, IconX } from "@tabler/icons-react"
+import { IconCheck, IconPlus, IconTrash } from "@tabler/icons-react"
 import { Button } from "@/components/ui/Button"
 import { Input } from "@/components/ui/Input"
 import { useForm } from "react-hook-form"

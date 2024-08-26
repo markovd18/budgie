@@ -16,3 +16,5 @@ export const db = drizzle(client, { schema })
 if (isProd()) {
   migrate(db, { migrationsFolder: "drizzle" })
 }
+
+export type Database = typeof db

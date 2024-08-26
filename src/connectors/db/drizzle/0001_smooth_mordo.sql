@@ -1,0 +1,1 @@
+ALTER TABLE `period_budget_entry` ADD `type` text DEFAULT 'expense' NOT NULL;
