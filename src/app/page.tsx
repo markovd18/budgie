@@ -39,7 +39,7 @@ export default function Home() {
   })
 
   return (
-    <main>
+    <main className="px-4">
       <span className="block h-4" />
 
       <h1 className="text-3xl font-bold">Rozpočet Srpen - Září 2024</h1>

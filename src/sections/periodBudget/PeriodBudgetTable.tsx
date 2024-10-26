@@ -2,7 +2,7 @@
 
 import { ColumnDef, flexRender, getCoreRowModel, Table as TableType, useReactTable } from "@tanstack/react-table"
 import { PeriodBudgetEntry } from "./periodBudget.utils"
-import { PropsWithChildren, useMemo, useState } from "react"
+import { PropsWithChildren, useCallback, useEffect, useMemo, useState } from "react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/Table"
 import { IconCheck, IconPlus, IconTrash } from "@tabler/icons-react"
 import { Button } from "@/components/ui/Button"
@@ -52,13 +52,24 @@ function NewEntryRow(props: NewEntryRowProps) {
 
   return (
     <TableRow>
-      <TableCell>
+      <TableCell className="w-[40%] [word-wrap:break-word]">
         <Cell>
-          <Input type="text" placeholder="název" autoFocus={true} required {...form.register("name")} />
+          <Input
+            type="text"
+            placeholder="název"
+            autoFocus={true}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                form.handleSubmit(handleSubmit)()
+              }
+            }}
+            required
+            {...form.register("name")}
+          />
           {form.formState.errors.name && <p className="text-red-500 text-left">{form.formState.errors.name.message}</p>}
         </Cell>
       </TableCell>
-      <TableCell>
+      <TableCell className="w-[40%] [word-wrap:break-word]">
         <Cell>
           <Input
             type="number"
@@ -74,7 +85,7 @@ function NewEntryRow(props: NewEntryRowProps) {
       </TableCell>
       <TableCell>
         <Cell>
-          <Button variant="ghost" type="button" onClick={handleSubmit}>
+          <Button variant="ghost" type="submit" onClick={handleSubmit}>
             <IconCheck size={16} className="text-emerald-600" />
           </Button>
           <Button variant="ghost" type="button" onClick={onCancel}>
@@ -101,6 +112,7 @@ const data: PeriodBudgetEntry[] = [
 
 export function PeriodBudgetTable() {
   const [tableData, setTableData] = useState(data)
+
   const budgetColumns: ColumnDef<PeriodBudgetEntry>[] = useMemo(
     () => [
       {
@@ -156,6 +168,33 @@ function PeriodBudgetTableInner(props: PeriodBudgetTableInnerProps) {
   const { table, columns, onEntryAdd } = props
   const [editing, setEditing] = useState(false)
 
+  const keyDownHandler = useCallback(
+    (e: KeyboardEvent) => {
+      const modifierPressed = e.shiftKey || e.altKey || e.ctrlKey
+      if (modifierPressed) {
+        return
+      }
+
+      if (e.key === "a" && !editing) {
+        e.preventDefault()
+        setEditing(true)
+        return
+      }
+
+      if (e.key === "Escape") {
+        setEditing(false)
+      }
+    },
+    [editing],
+  )
+
+  useEffect(() => {
+    document.addEventListener("keydown", keyDownHandler)
+    return () => {
+      document.removeEventListener("keydown", keyDownHandler)
+    }
+  }, [keyDownHandler])
+
   function handleSubmit(values: FormValues) {
     onEntryAdd?.(values)
     setEditing(false)
@@ -170,7 +209,7 @@ function PeriodBudgetTableInner(props: PeriodBudgetTableInnerProps) {
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
                   return (
-                    <TableHead key={header.id}>
+                    <TableHead key={header.id} className="w-[40%]">
                       {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
                     </TableHead>
                   )
@@ -184,7 +223,9 @@ function PeriodBudgetTableInner(props: PeriodBudgetTableInnerProps) {
                 {table.getRowModel().rows.map((row) => (
                   <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
+                      <TableCell className="w-[40%] [word-wrap:break-word]" key={cell.id}>
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
                     ))}
                   </TableRow>
                 ))}
