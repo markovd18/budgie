@@ -1,23 +1,45 @@
 "use client"
 
-import { ColumnDef, flexRender, getCoreRowModel, Table as TableType, useReactTable } from "@tanstack/react-table"
-import { PeriodBudgetEntry } from "./periodBudget.utils"
-import { PropsWithChildren, useCallback, useEffect, useMemo, useState } from "react"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/Table"
-import { IconCheck, IconPlus, IconTrash } from "@tabler/icons-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/AlertDialog"
 import { Button } from "@/components/ui/Button"
+import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/Form"
 import { Input } from "@/components/ui/Input"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/Table"
+import { isModifierPressed, isTableRowElement } from "@/utils/dom"
+import { round } from "@/utils/number"
+import { isNotNil } from "@/utils/typeguards"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { IconCheck, IconPlus, IconTrash } from "@tabler/icons-react"
+import { ColumnDef, flexRender, getCoreRowModel, Table as TableType, useReactTable } from "@tanstack/react-table"
+import {
+  PropsWithChildren,
+  KeyboardEvent as ReactKeyboardEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { zodResolver } from "@hookform/resolvers/zod"
+import { PeriodBudgetEntry } from "./periodBudget.utils"
 
 function Cell(props: PropsWithChildren) {
   return <div className="text-right font-medium">{props.children}</div>
 }
 
 const formSchema = z.object({
-  name: z.string().min(1).max(100),
-  amount: z.number().min(0),
+  name: z.string().min(1, "Zadejte alespoň 1 znak.").max(100, "Zadejte nejvýše 100 znaků."),
+  amount: z.number({ errorMap: () => ({ message: "Zadejte kladné číslo." }) }).min(0, "Částka musí být kladná."),
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -39,6 +61,13 @@ function NewEntryRow(props: NewEntryRowProps) {
     },
   })
 
+  function keyDownHandler<TElement extends Element>(e: ReactKeyboardEvent<TElement>) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      form.handleSubmit(handleSubmit)()
+      return
+    }
+  }
+
   async function handleSubmit() {
     // manually triggering validation since we cannot have a form element in table
     const values = form.getValues()
@@ -51,59 +80,82 @@ function NewEntryRow(props: NewEntryRowProps) {
   }
 
   return (
-    <TableRow>
-      <TableCell className="w-[40%] [word-wrap:break-word]">
-        <Cell>
-          <Input
-            type="text"
-            placeholder="název"
-            autoFocus={true}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                form.handleSubmit(handleSubmit)()
-              }
-            }}
-            required
-            {...form.register("name")}
-          />
-          {form.formState.errors.name && <p className="text-red-500 text-left">{form.formState.errors.name.message}</p>}
-        </Cell>
-      </TableCell>
-      <TableCell className="w-[40%] [word-wrap:break-word]">
-        <Cell>
-          <Input
-            type="number"
-            placeholder="částka"
-            step={0.01}
-            required
-            {...form.register("amount", { valueAsNumber: true })}
-          />
-          {form.formState.errors.amount && (
-            <p className="text-red-500 text-left">{form.formState.errors.amount.message}</p>
-          )}
-        </Cell>
-      </TableCell>
-      <TableCell>
-        <Cell>
-          <Button variant="ghost" type="submit" onClick={handleSubmit}>
-            <IconCheck size={16} className="text-emerald-600" />
-          </Button>
-          <Button variant="ghost" type="button" onClick={onCancel}>
-            <IconTrash size={16} className="text-red-500" />
-          </Button>
-        </Cell>
-      </TableCell>
-    </TableRow>
+    <Form {...form}>
+      <TableRow>
+        <TableCell className="w-[40%] [word-wrap:break-word]">
+          <Cell>
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <Input
+                      type="text"
+                      placeholder="např. Potraviny"
+                      autoFocus={true}
+                      onKeyDown={keyDownHandler}
+                      required
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </Cell>
+        </TableCell>
+        <TableCell className="w-[40%] [word-wrap:break-word]">
+          <Cell>
+            <FormField
+              control={form.control}
+              name="amount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      placeholder="např. 1200"
+                      step={1}
+                      required
+                      onKeyDown={keyDownHandler}
+                      {...field}
+                      onChange={(e) => {
+                        const value = e.target.value.length === 0 ? "" : round(Number(e.target.value), 2)
+                        field.onChange(value)
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </Cell>
+        </TableCell>
+        <TableCell>
+          <Cell>
+            <Button variant="ghost" type="submit" onClick={handleSubmit}>
+              <IconCheck size={16} className="text-emerald-600" />
+            </Button>
+            <Button variant="ghost" type="button" onClick={onCancel}>
+              <IconTrash size={16} className="text-red-500" />
+            </Button>
+          </Cell>
+        </TableCell>
+      </TableRow>
+    </Form>
   )
 }
 
 const data: PeriodBudgetEntry[] = [
   {
+    id: "vyplata",
     name: "Výplata",
     amount: 40000,
     type: "income",
   },
   {
+    id: "najem",
     name: "Nájem",
     amount: 17000,
     type: "expense",
@@ -149,29 +201,44 @@ export function PeriodBudgetTable() {
     data: tableData,
     columns: budgetColumns,
     getCoreRowModel: getCoreRowModel(),
+    getRowId: (row) => row.id,
   })
 
   function handleEntryAdd(entry: FormValues) {
-    setTableData((prev) => [...prev, { ...entry, type: "expense" }])
+    setTableData((prev) => [...prev, { ...entry, id: entry.name.toLowerCase(), type: "expense" }])
   }
 
-  return <PeriodBudgetTableInner table={budgetTable} columns={budgetColumns} onEntryAdd={handleEntryAdd} />
+  function handleEntryDelete(id: string) {
+    setTableData((prev) => prev.filter((i) => i.id !== id))
+  }
+
+  return (
+    <PeriodBudgetTableInner
+      table={budgetTable}
+      columns={budgetColumns}
+      onEntryAdd={handleEntryAdd}
+      onEntryDelete={handleEntryDelete}
+    />
+  )
 }
 
 type PeriodBudgetTableInnerProps = {
   table: TableType<PeriodBudgetEntry>
   columns: ColumnDef<PeriodBudgetEntry>[]
   onEntryAdd?: (entry: FormValues) => void
+  onEntryDelete?: (id: string) => void
 }
 
 function PeriodBudgetTableInner(props: PeriodBudgetTableInnerProps) {
-  const { table, columns, onEntryAdd } = props
+  const { table, columns, onEntryAdd, onEntryDelete } = props
   const [editing, setEditing] = useState(false)
+  const [rowIdToDelete, setRowIdToDelete] = useState<string | null>(null)
+
+  const rowToDelete = isNotNil(rowIdToDelete) ? table.getRow(rowIdToDelete).original : null
 
   const keyDownHandler = useCallback(
     (e: KeyboardEvent) => {
-      const modifierPressed = e.shiftKey || e.altKey || e.ctrlKey
-      if (modifierPressed) {
+      if (isModifierPressed(e)) {
         return
       }
 
@@ -183,6 +250,46 @@ function PeriodBudgetTableInner(props: PeriodBudgetTableInnerProps) {
 
       if (e.key === "Escape") {
         setEditing(false)
+        return
+      }
+
+      if (e.key === "ArrowDown" || e.key === "j") {
+        const activeElement = document.activeElement
+        if (!activeElement) {
+          // TODO nemam nic aktivniho - zafocusovat prvni radek
+          return
+        }
+
+        if (!isTableRowElement(activeElement)) {
+          return
+        }
+
+        const nextRow = activeElement.nextElementSibling
+        if (!isTableRowElement(nextRow)) {
+          return
+        }
+
+        nextRow.focus()
+        return
+      }
+
+      if (e.key === "ArrowUp" || e.key === "k") {
+        const activeElement = document.activeElement
+        if (!activeElement) {
+          // TODO nemam nic aktivniho - zafocusovat prvni radek
+          return
+        }
+
+        if (!isTableRowElement(activeElement)) {
+          return
+        }
+
+        const previousRow = activeElement.previousElementSibling
+        if (!isTableRowElement(previousRow)) {
+          return
+        }
+
+        previousRow.focus()
       }
     },
     [editing],
@@ -202,6 +309,29 @@ function PeriodBudgetTableInner(props: PeriodBudgetTableInnerProps) {
 
   return (
     <>
+      <AlertDialog
+        open={isNotNil(rowToDelete)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRowIdToDelete(null)
+          }
+        }}
+      >
+        {/* TODO nejak se tam dela obrovskej padding kdyz se to otevre a nevim proc */}
+        <AlertDialogTrigger className="hidden invisible" />
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Opravdu chcete smazat položku?</AlertDialogTitle>
+            <AlertDialogDescription>Pokud položku smažete, bude nenávratně ztracena.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zrušit</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={() => onEntryDelete?.(rowIdToDelete ?? "")}>
+              Smazat
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <div className="rounded-md border">
         <Table>
           <TableHeader>
@@ -220,8 +350,22 @@ function PeriodBudgetTableInner(props: PeriodBudgetTableInnerProps) {
           <TableBody>
             {table.getRowModel().rows?.length || editing ? (
               <>
-                {table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id} data-state={row.getIsSelected() && "selected"}>
+                {table.getRowModel().rows.map((row, i) => (
+                  <TableRow
+                    id={row.id}
+                    key={row.id}
+                    data-state={row.getIsSelected() && "selected"}
+                    tabIndex={i + 1}
+                    onKeyDown={(e) => {
+                      if (isModifierPressed(e)) {
+                        return
+                      }
+
+                      if (e.key === "Delete" || e.key === "d") {
+                        setRowIdToDelete(row.id)
+                      }
+                    }}
+                  >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell className="w-[40%] [word-wrap:break-word]" key={cell.id}>
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -241,6 +385,7 @@ function PeriodBudgetTableInner(props: PeriodBudgetTableInnerProps) {
           </TableBody>
         </Table>
       </div>
+
       <span className="block h-4" />
 
       <div className="flex flex-row-reverse">
